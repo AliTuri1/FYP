@@ -1,0 +1,1485 @@
+/* =============================================================================
+   Sameer Battery House POS — UI System
+   Layout Architecture · Form Primitives · Ledger Patterns · Status System
+
+   PHILOSOPHY: The interface is the first line of data-integrity defense.
+   Every layout decision, color choice, and interaction pattern exists to
+   prevent human typing errors from reaching the database.
+   ============================================================================= */
+
+
+/* ─── Keyframes ────────────────────────────────────────────────────────────── */
+
+@keyframes slideUp      { from { opacity:0; transform:translateY(8px)  } to { opacity:1; transform:translateY(0) } }
+@keyframes fadeIn       { from { opacity:0 }                             to { opacity:1 } }
+@keyframes scaleIn      { from { opacity:0; transform:scale(0.94) }     to { opacity:1; transform:scale(1) } }
+@keyframes verifyMatch  { from { opacity:.3; transform:scale(.97) }     to { opacity:1;  transform:scale(1) } }
+@keyframes shake        {
+  0%,100% { transform:translateX(0) }
+  15%     { transform:translateX(-6px) }
+  30%     { transform:translateX(6px) }
+  45%     { transform:translateX(-4px) }
+  60%     { transform:translateX(4px) }
+  75%     { transform:translateX(-2px) }
+  90%     { transform:translateX(2px) }
+}
+@keyframes unlockPulse  {
+  from { filter:blur(1px); opacity:.35; transform:scale(.97) translateY(3px) }
+  to   { filter:blur(0);   opacity:1;   transform:scale(1)   translateY(0)   }
+}
+@keyframes balanceFlash {
+  0%   { transform:scale(1) }
+  35%  { transform:scale(1.05) }
+  100% { transform:scale(1) }
+}
+@keyframes pulseRing    {
+  0%,100% { box-shadow: 0 0 0 0   var(--pulse-color, rgba(20,184,166,.5)) }
+  50%     { box-shadow: 0 0 0 8px var(--pulse-color, rgba(20,184,166,0)) }
+}
+@keyframes creditWarn   {
+  0%,100% { border-color: rgba(245,158,11,.8); box-shadow: 0 0 0 0 rgba(245,158,11,.5) }
+  50%     { border-color: rgba(239,68,68,.9);  box-shadow: 0 0 0 6px rgba(239,68,68,0) }
+}
+@keyframes serialScan   {
+  0%   { background-position: -200% 0 }
+  100% { background-position:  200% 0 }
+}
+@keyframes spin         { to { transform:rotate(360deg) } }
+
+
+/* ─── Animation Utilities ──────────────────────────────────────────────────── */
+
+.anim-slide-up      { animation: slideUp     .2s cubic-bezier(.2,.8,.3,1) both }
+.anim-fade          { animation: fadeIn      .15s ease both }
+.anim-scale-in      { animation: scaleIn     .18s cubic-bezier(.2,.8,.3,1) both }
+.anim-verify-match  { animation: verifyMatch .25s cubic-bezier(.2,.8,.3,1) both }
+.anim-shake         { animation: shake       .35s ease both }
+.anim-unlock        { animation: unlockPulse .4s  cubic-bezier(.2,.8,.3,1) both }
+.anim-balance       { animation: balanceFlash .5s cubic-bezier(.2,.8,.3,1) both }
+.anim-spin          { animation: spin        .7s linear infinite }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-slide-up, .anim-fade, .anim-scale-in,
+  .anim-verify-match, .anim-shake, .anim-unlock,
+  .anim-balance { animation: none }
+}
+
+
+/* =============================================================================
+   1. LAYOUT SHELL
+   The primary application container. Sidebar + Content, never stacked.
+   ============================================================================= */
+
+.pos-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+
+.pos-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle top gradient: accent bleeds into navy */
+.pos-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(20,184,166,0.12) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.pos-sidebar__brand {
+  padding: 20px 16px 16px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pos-sidebar__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 60%, #0F766E 100%);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 12px rgba(20,184,166,0.45);
+}
+
+.pos-sidebar__divider {
+  height: 1px;
+  background: rgba(255,255,255,0.06);
+  margin: 0 16px 12px;
+  flex-shrink: 0;
+}
+
+.pos-sidebar__nav {
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pos-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s;
+  background: transparent;
+  position: relative;
+  outline: none;
+  width: 100%;
+}
+
+.pos-nav-item:hover  { background: var(--sidebar-hover) }
+.pos-nav-item--active { background: var(--sidebar-active) }
+
+/* Teal active indicator bar */
+.pos-nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.pos-nav-item__icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  transition: background .12s, color .12s;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.38);
+}
+
+.pos-nav-item--active .pos-nav-item__icon {
+  background: rgba(20,184,166,0.22);
+  color: #5EEAD4;
+}
+
+/* ── Main Area ────────────────────────────────────────────────────────────── */
+
+.pos-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pos-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 var(--pad);
+  height: 58px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.pos-header__icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.pos-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--pad);
+}
+
+
+/* =============================================================================
+   2. SPLIT LAYOUTS
+   POS checkout: left product grid + right cart/summary panel.
+   The right panel is fixed-width — it is the transaction "glass."
+   ============================================================================= */
+
+/* Standard 65/35 POS split */
+.split-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--gap);
+  height: calc(100vh - 58px - (var(--pad) * 2));
+  overflow: hidden;
+}
+
+/* Ledger split: list + detail panel */
+.split-view--ledger {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+
+/* Full-width (single panel, no sidebar) */
+.split-view--full {
+  grid-template-columns: 1fr;
+}
+
+.split-view__left  { display:flex; flex-direction:column; gap:var(--gap); min-height:0; overflow:hidden }
+.split-view__right { display:flex; flex-direction:column; overflow:hidden }
+
+/* Cart / transaction panel */
+.cart-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.cart-panel__head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cart-panel__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  min-height: 0;
+}
+
+.cart-panel__foot {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+
+/* =============================================================================
+   3. CARD / PANEL PRIMITIVES
+   ============================================================================= */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.panel__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.panel__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 1px;
+}
+
+.panel__body {
+  padding: var(--pad);
+}
+
+.panel__body--flush { padding: 0 }
+
+/* Stat card */
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card__icon {
+  width: 46px; height: 46px;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+
+.stat-card__label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 5px;
+}
+
+.stat-card__value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.stat-card__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+
+/* =============================================================================
+   4. FORM SYSTEM — TYPO PREVENTION FIRST
+   All inputs must be legible. Monospace for any critical identifier field.
+   ============================================================================= */
+
+/* Base field — all inputs, selects, textareas */
+.field {
+  width: 100%;
+  height: var(--row-h);
+  padding: 0 13px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  transition: border-color .14s, box-shadow .14s, background .14s;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.field:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.field::placeholder {
+  color: var(--text-faint);
+}
+
+.field:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Field states */
+.field--ok {
+  border-color: var(--ok);
+  box-shadow: var(--ring-ok);
+  background: var(--ok-soft);
+}
+
+.field--warn {
+  border-color: var(--warn);
+  box-shadow: var(--ring-warn);
+  background: var(--warn-soft);
+}
+
+.field--bad {
+  border-color: var(--bad);
+  box-shadow: var(--ring-bad);
+  background: var(--bad-soft);
+  animation: shake .35s ease both;
+}
+
+/* Select arrow */
+select.field {
+  cursor: pointer;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+/* ── Serial Number Field (monospace, wide tracking, tinted) ──────────────── */
+/* RULE: Any field that accepts a hardware serial, SKU, or invoice ID
+         MUST use .field-serial to prevent 0/O and l/1 confusion. */
+
+.field-serial {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.10em;
+  color: var(--serial-color);
+  text-transform: uppercase;
+}
+
+.field-serial::placeholder {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+/* ── Amount / Currency Field ─────────────────────────────────────────────── */
+/* RULE: All currency inputs use tabular numerals for column alignment. */
+
+.field-amount {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  letter-spacing: 0.02em;
+  color: var(--amount-color);
+}
+
+/* ── Field Label ─────────────────────────────────────────────────────────── */
+
+.field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.field-label__text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+.field-label__required {
+  color: var(--bad);
+  margin-left: 3px;
+}
+
+.field-label__hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+
+/* =============================================================================
+   5. SMART SELECTOR
+   Replaces open text inputs for all fields that reference existing DB records.
+   RULE: If the field value MUST EXIST in the database, use .smart-selector.
+         Never allow a free-text field for product names, serial IDs, or customer refs.
+   ============================================================================= */
+
+.smart-selector {
+  position: relative;
+}
+
+.smart-selector__trigger {
+  width: 100%;
+  height: var(--row-h);
+  padding: 0 40px 0 13px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: border-color .14s, box-shadow .14s;
+  outline: none;
+  position: relative;
+}
+
+.smart-selector__trigger:focus,
+.smart-selector__trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+/* Chevron arrow */
+.smart-selector__trigger::after {
+  content: '';
+  position: absolute;
+  right: 13px; top: 50%; transform: translateY(-50%);
+  width: 10px; height: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%2394A3B8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+}
+
+/* Verified state: the selected record has been confirmed in the DB */
+.smart-selector__trigger--verified {
+  border-color: var(--ok);
+  color: var(--ok-text);
+  background: var(--ok-soft);
+}
+
+/* Dropdown list */
+.smart-selector__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+  animation: slideUp .16s cubic-bezier(.2,.8,.3,1) both;
+}
+
+/* Search input inside dropdown */
+.smart-selector__search {
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.smart-selector__search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  outline: none;
+}
+
+.smart-selector__search input:focus {
+  border-color: var(--accent);
+}
+
+/* Individual row in dropdown */
+.smart-selector__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: background .1s;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+
+.smart-selector__item:last-child { border-bottom: none }
+
+.smart-selector__item:hover {
+  background: var(--surface-2);
+}
+
+.smart-selector__item--focused {
+  background: var(--accent-soft);
+}
+
+.smart-selector__item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.smart-selector__item-meta {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.smart-selector__item-value {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.smart-selector__empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+
+/* =============================================================================
+   6. DOUBLE-ENTRY VERIFICATION GRID
+   High-stakes data entry requires the user to type the value TWICE.
+   The commit button stays locked until both fields achieve a 100% character match.
+   Used for: serial number intake, large payment amounts, credit limit overrides.
+   ============================================================================= */
+
+.verify-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.verify-grid__row {
+  position: relative;
+}
+
+.verify-grid__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+/* The comparison status bar between the two fields */
+.verify-grid__status-bar {
+  height: 3px;
+  border-radius: 99px;
+  background: var(--border);
+  overflow: hidden;
+  margin: 4px 0;
+  transition: background .2s;
+}
+
+.verify-grid__status-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ok);
+  transition: width .2s, background .2s;
+  width: 0%;
+}
+
+/* States */
+.verify-grid--neutral  .verify-grid__status-fill { background: var(--border-strong); width: 0% }
+.verify-grid--partial  .verify-grid__status-fill { background: var(--warn); }
+.verify-grid--matched  .verify-grid__status-fill { background: var(--ok);   width: 100%; }
+.verify-grid--mismatch .verify-grid__status-fill { background: var(--bad);  width: 100%; }
+
+/* Field overrides per state */
+.verify-grid--matched  .field { border-color: var(--ok);   box-shadow: var(--ring-ok) }
+.verify-grid--mismatch .field { border-color: var(--bad);  box-shadow: var(--ring-bad); animation: shake .35s ease both }
+
+/* Verification badge shown after matching */
+.verify-grid__badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  animation: verifyMatch .25s cubic-bezier(.2,.8,.3,1) both;
+}
+
+.verify-grid__badge--ok {
+  background: var(--ok-soft);
+  color: var(--ok-text);
+  border: 1px solid rgba(16,185,129,0.25);
+}
+
+.verify-grid__badge--fail {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  border: 1px solid rgba(239,68,68,0.25);
+}
+
+/* ── Commit Button (locked until verified) ──────────────────────────────── */
+
+.commit-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: var(--radius-lg);
+  border: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: background .15s, opacity .15s, transform .1s;
+  letter-spacing: -0.01em;
+}
+
+/* LOCKED: grayed out, no pointer, visually inaccessible */
+.commit-btn--locked {
+  background: var(--surface-3);
+  color: var(--text-faint);
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* UNLOCKED: vivid accent, scales in with animation */
+.commit-btn--unlocked {
+  background: var(--accent);
+  color: #fff;
+  animation: unlockPulse .4s cubic-bezier(.2,.8,.3,1) both;
+}
+
+.commit-btn--unlocked:hover  { background: var(--accent-hover); transform: translateY(-2px) scale(1.02); box-shadow: 0 4px 12px rgba(13,148,136,0.25) }
+.commit-btn--unlocked:active { background: var(--accent-press); transform: translateY(0) scale(0.98); box-shadow: none }
+
+/* DANGER variant: for irreversible operations (write-off, credit override) */
+.commit-btn--danger-unlocked {
+  background: var(--bad);
+  color: #fff;
+  animation: unlockPulse .4s cubic-bezier(.2,.8,.3,1) both;
+}
+
+
+/* =============================================================================
+   7. STATUS BADGE SYSTEM
+   Statuses are never plain text. Each state has a color, icon slot, and
+   optional pulse ring for provisional states.
+   ============================================================================= */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+/* ── Cash Cleared — immediate, permanent ─────────────────────────────────── */
+.badge--cleared {
+  background: var(--ok-soft);
+  color: var(--ok-text);
+  border-color: rgba(5,150,105,0.25);
+}
+
+/* ── Bank Transfer — provisional, pending admin verification ─────────────── */
+.badge--pending {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  border-color: rgba(217,119,6,0.25);
+  position: relative;
+  --pulse-color: rgba(245,158,11,0.5);
+  animation: pulseRing 2s cubic-bezier(.4,0,.6,1) infinite;
+}
+
+/* ── Verified by admin ───────────────────────────────────────────────────── */
+.badge--verified {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  border-color: rgba(20,184,166,0.25);
+}
+
+/* ── Rejected / Integrity Failure ────────────────────────────────────────── */
+.badge--rejected,
+.badge--flagged {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  border-color: rgba(220,38,38,0.25);
+}
+
+/* ── Neutral / Draft ─────────────────────────────────────────────────────── */
+.badge--neutral {
+  background: var(--surface-3);
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+/* ── In Stock ─────────────────────────────────────────────────────────────── */
+.badge--in-stock { background: var(--ok-soft);   color: var(--ok-text);   border-color: rgba(5,150,105,0.2) }
+.badge--low      { background: var(--warn-soft);  color: var(--warn-text); border-color: rgba(217,119,6,0.2) }
+.badge--out      { background: var(--bad-soft);   color: var(--bad-text);  border-color: rgba(220,38,38,0.2) }
+
+/* Status dot (inside badge or standalone) */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--ok      { background: var(--ok) }
+.status-dot--warn    { background: var(--warn) }
+.status-dot--bad     { background: var(--bad) }
+.status-dot--teal    { background: var(--accent) }
+.status-dot--neutral { background: var(--text-faint) }
+
+.status-dot--pulsing {
+  animation: pulseRing 2s cubic-bezier(.4,0,.6,1) infinite;
+  --pulse-color: rgba(245,158,11,0.5);
+}
+
+
+/* =============================================================================
+   8. FINANCIAL DATA — LEDGER TIMELINE
+   Mirrors double-entry bookkeeping layout. Debits (invoices) and credits
+   (payments) are visually separated. The running balance is sticky and
+   changes color dynamically when approaching credit threshold.
+   ============================================================================= */
+
+/* ── Ledger Container ───────────────────────────────────────────────────── */
+
+.ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.ledger__head {
+  display: grid;
+  grid-template-columns: 120px 1fr 130px 130px 140px;
+  gap: 0;
+  padding: 11px 20px;
+  background: var(--surface-2);
+  border-bottom: 1.5px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── Ledger Row ──────────────────────────────────────────────────────────── */
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 130px 130px 140px;
+  gap: 0;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  transition: background .1s;
+}
+
+.ledger-row:last-child { border-bottom: none }
+.ledger-row:hover      { background: var(--surface-2) }
+
+/* Debit row (invoice issued — money owed TO business) */
+.ledger-row--debit {
+  border-left: 3px solid var(--bad);
+}
+
+/* Credit row (payment received — balance reduced) */
+.ledger-row--credit {
+  border-left: 3px solid var(--ok);
+}
+
+/* Provisional row (bank transfer not yet admin-verified) */
+.ledger-row--provisional {
+  border-left: 3px solid var(--warn);
+  opacity: 0.9;
+}
+
+/* ── Ledger Cell Types ────────────────────────────────────────────────────── */
+
+.ledger-date {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.03em;
+}
+
+.ledger-ref {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.ledger-desc {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-desc__sub {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* Amount cells — always monospace, tabular nums, right-aligned */
+.ledger-debit-amount {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--bad-text);
+  text-align: right;
+}
+
+.ledger-credit-amount {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ok-text);
+  text-align: right;
+}
+
+/* ── Running Balance (sticky, updates dynamically) ──────────────────────── */
+
+.ledger-balance {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  transition: color .3s, text-shadow .3s;
+}
+
+/* Clear: balance is healthy */
+.ledger-balance--clear {
+  color: var(--ok-text);
+}
+
+/* Warning: balance is approaching credit threshold (> 70% of limit) */
+.ledger-balance--warn {
+  color: var(--warn-text);
+}
+
+/* Breach: balance exceeds credit limit — hard visual alarm */
+.ledger-balance--breach {
+  color: var(--bad-text);
+  text-shadow: 0 0 16px rgba(239,68,68,0.6);
+}
+
+/* ── Credit Threshold Indicator Bar ─────────────────────────────────────── */
+
+.credit-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: visible;
+  position: relative;
+  margin-top: 8px;
+}
+
+.credit-bar__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ok);
+  transition: width .5s cubic-bezier(.2,.8,.3,1), background .4s;
+  position: relative;
+}
+
+.credit-bar--warn   .credit-bar__fill { background: var(--warn) }
+.credit-bar--breach .credit-bar__fill { background: var(--bad) }
+
+/* Breach mode adds the pulsing animation on the row-level container */
+.credit-bar--breach {
+  animation: creditWarn 1.8s ease-in-out infinite;
+}
+
+/* Threshold marker line */
+.credit-bar__marker {
+  position: absolute;
+  top: -4px; bottom: -4px;
+  width: 2px;
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+
+/* ── Sticky Total Footer (always visible at bottom of ledger) ────────────── */
+
+.ledger-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-top: 2px solid var(--border-strong);
+  background: var(--surface-2);
+  position: sticky;
+  bottom: 0;
+}
+
+.ledger-total__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.ledger-total__amount {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  transition: color .3s;
+}
+
+.ledger-total__amount--clear  { color: var(--ok-text) }
+.ledger-total__amount--warn   { color: var(--warn-text) }
+.ledger-total__amount--breach { color: var(--bad-text); animation: creditWarn 1.8s ease-in-out infinite }
+
+
+/* =============================================================================
+   9. DATA TABLES
+   High-density tabular data with proper column semantics.
+   Financial columns are always right-aligned with monospace font.
+   ============================================================================= */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.data-table thead tr {
+  background: var(--surface-2);
+  border-bottom: 1.5px solid var(--border);
+}
+
+.data-table thead th {
+  padding: 11px 16px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table thead th:first-child { padding-left: 20px }
+.data-table thead th:last-child  { padding-right: 20px }
+.data-table th.align-right       { text-align: right }
+.data-table th.align-center      { text-align: center }
+
+/* ── Body Rows ────────────────────────────────────────────────────────────── */
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+
+.data-table tbody tr:last-child  { border-bottom: none }
+.data-table tbody tr:hover       { background: var(--surface-2) }
+
+.data-table tbody td {
+  padding: 13px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tbody td:first-child { padding-left: 20px }
+.data-table tbody td:last-child  { padding-right: 20px }
+
+/* Row state overrides */
+.data-table tbody tr.row--matched    { background: var(--ok-soft) }
+.data-table tbody tr.row--mismatch   { background: var(--bad-soft) }
+.data-table tbody tr.row--pending    { background: var(--warn-soft); opacity: .9 }
+.data-table tbody tr.row--disabled   { opacity: .45 }
+
+/* ── Cell Type Utilities ─────────────────────────────────────────────────── */
+
+/* All serial number cells */
+td.cell-serial {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--serial-color);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* All currency/amount cells */
+td.cell-amount {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text);
+}
+
+td.cell-amount--positive { color: var(--ok-text) }
+td.cell-amount--negative { color: var(--bad-text) }
+
+/* Invoice ref number */
+td.cell-ref {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+/* Date cells */
+td.cell-date {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* Summary / total footer row */
+.data-table tfoot tr {
+  border-top: 2px solid var(--border-strong);
+  background: var(--surface-2);
+}
+
+.data-table tfoot td {
+  padding: 13px 16px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ── Dense Variant ───────────────────────────────────────────────────────── */
+
+.data-table--dense thead th { padding: 9px 12px; font-size: 10px }
+.data-table--dense tbody td { padding: 10px 12px; font-size: 13px }
+
+
+/* =============================================================================
+   10. CURRENCY DISPLAY PRIMITIVES
+   All money on screen must use monospace, tabular numerals.
+   ============================================================================= */
+
+.currency {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.currency--sm   { font-size: 12.5px }
+.currency--md   { font-size: 14px }
+.currency--lg   { font-size: 18px }
+.currency--xl   { font-size: 24px }
+.currency--kpi  { font-size: 30px; letter-spacing: -0.03em; font-weight: 800 }
+
+.currency--positive { color: var(--ok-text) }
+.currency--negative { color: var(--bad-text) }
+.currency--neutral  { color: var(--text) }
+.currency--dim      { color: var(--text-faint) }
+
+/* Serial / hardware ID display */
+.serial-display {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--serial-color);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  display: inline-block;
+}
+
+.serial-display--verified {
+  background: var(--ok-soft);
+  border-color: rgba(5,150,105,0.3);
+  color: var(--ok-text);
+}
+
+.serial-display--mismatch {
+  background: var(--bad-soft);
+  border-color: rgba(220,38,38,0.3);
+  color: var(--bad-text);
+  animation: shake .35s ease both;
+}
+
+
+/* =============================================================================
+   11. BUTTON SYSTEM
+   ============================================================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s, box-shadow .12s, transform .08s;
+  white-space: nowrap;
+  outline: none;
+  letter-spacing: -0.005em;
+}
+
+.btn:focus-visible { box-shadow: var(--ring) }
+
+.btn--sm { height: 32px; padding: 0 12px; font-size: 12.5px }
+.btn--md { height: 40px; padding: 0 16px; font-size: 13.5px }
+.btn--lg { height: 48px; padding: 0 22px; font-size: 15px }
+
+.btn--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 0 0 1px rgba(20,184,166,0.25);
+}
+.btn--primary:hover  { background: var(--accent-hover) }
+.btn--primary:active { background: var(--accent-press); transform: scale(.98) }
+
+.btn--soft {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.btn--soft:hover  { background: var(--surface-3); border-color: var(--border-strong) }
+.btn--soft:active { transform: scale(.98) }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn--ghost:hover  { background: var(--surface-2) }
+.btn--ghost:active { transform: scale(.98) }
+
+.btn--danger {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  border-color: rgba(220,38,38,0.25);
+}
+.btn--danger:hover { background: var(--bad); color: #fff }
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+
+/* =============================================================================
+   12. MODAL / OVERLAY
+   ============================================================================= */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(5,10,24,0.72);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow-y: auto;
+  animation: fadeIn .15s ease both;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 600px;
+  animation: slideUp .22s cubic-bezier(.2,.8,.3,1) both;
+  overflow: hidden;
+}
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.modal__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.modal__body   { padding: 22px }
+.modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+
+/* =============================================================================
+   13. ALERT / FEEDBACK BANNERS
+   ============================================================================= */
+
+.alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 13px;
+  animation: slideUp .18s cubic-bezier(.2,.8,.3,1) both;
+}
+
+.alert__icon  { flex-shrink: 0; margin-top: 1px }
+.alert__title { font-weight: 700; margin-bottom: 3px }
+.alert__body  { line-height: 1.5; opacity: .9 }
+
+.alert--ok {
+  background: var(--ok-soft);
+  border-color: rgba(5,150,105,0.25);
+  color: var(--ok-text);
+}
+
+.alert--warn {
+  background: var(--warn-soft);
+  border-color: rgba(217,119,6,0.25);
+  color: var(--warn-text);
+}
+
+.alert--bad {
+  background: var(--bad-soft);
+  border-color: rgba(220,38,38,0.25);
+  color: var(--bad-text);
+}
+
+.alert--info {
+  background: var(--accent-soft);
+  border-color: rgba(20,184,166,0.25);
+  color: var(--accent-text);
+}
+
+
+
+
+/* =============================================================================
+   15. UTILITY HELPERS
+   ============================================================================= */
+
+/* Overflow clamp */
+.truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+
+/* Monospaced numeric */
+.tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums }
+
+/* Section heading above a panel */
+.section-heading {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+/* Pill category chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: var(--gap) 0;
+}
+
+.divider--strong {
+  background: var(--border-strong);
+  height: 1.5px;
+}
+
+/* Stock bar (mini progress inside product cards) */
+.stock-bar {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.stock-bar__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ok);
+  transition: width .35s cubic-bezier(.2,.8,.3,1), background .3s;
+}
+
+.stock-bar__fill--warn { background: var(--warn) }
+.stock-bar__fill--low  { background: var(--bad) }
+
+/* Empty state */
+.empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.empty-state__icon  { color: var(--border-strong); margin-bottom: 14px }
+.empty-state__title { font-size: 14px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px }
+.empty-state__body  { font-size: 13px }
+
+/* Loading spinner */
+.spinner {
+  border-radius: 99px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}

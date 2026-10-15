@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.exe
+*.dmg
+*.zip
+.DS_Store
+.env
+.env.local
+.vscode/
+.idea/
+*.log
